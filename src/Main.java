@@ -8,7 +8,7 @@ public class Main {
         try {
             //create app
             IOApp app = new IOApp(
-                    inputStreamFactory(args),
+                    inputStreamProviderFactory(args).provide(),
                     new DefaultOutputStreamProvider().provide()
             );
             //run app
@@ -16,7 +16,7 @@ public class Main {
         } catch (IOException ex) {
             System.out.println(String.format("Error: %s", ex.getMessage()));
         }
-	}
+    }
 
     /**
      * Create input stream by args
@@ -24,16 +24,16 @@ public class Main {
      * @return
      * @throws IOException
      */
-	private static InputStream inputStreamFactory(String[] args) throws IOException {
+	private static InputStreamProvider inputStreamProviderFactory(String[] args) throws IOException {
         if(args.length == 0) {
-            return new DefaultInputStreamProvider().provide();
+            return new DefaultInputStreamProvider();
         } else if(args.length == 2) {
 
             final String key = args[0];
 
             //todo create other input streams
             if(key.equals(KEY_FILE)) {
-                return new FileInputStreamProvider(new File(args[1])).provide();
+                return new FileInputStreamProvider(new File(args[1]));
             } else {
                 throw new IOException(String.format("Wrong arg key '%s'", key));
             }
@@ -41,20 +41,20 @@ public class Main {
         } else {
             throw new IOException("Wrong arg key(s)");
         }
-	}
+    }
 
     /**
      * simple logs processor class
      */
     public static class IOApp {
-	    private InputStream inputStream;
-	    private OutputStream outputStream;
+        private InputStream inputStream;
+        private OutputStream outputStream;
         public final static String DELIMITER = " ";
 
-	    public IOApp(InputStream inputStream, OutputStream outputStream) throws IOException {
-		   this.inputStream = inputStream;
-		   this.outputStream = outputStream;
-	    }
+        public IOApp(InputStream inputStream, OutputStream outputStream) throws IOException {
+            this.inputStream = inputStream;
+            this.outputStream = outputStream;
+        }
 
         public InputStream getInputStream() {
            return inputStream;
@@ -157,9 +157,7 @@ public class Main {
                 int count = 0;
                 if(result.containsKey(login)) {
                     count += result.get(login);
-                }
-
-                count++;
+                } count++;
 
                 result.put(login, count);
             }
@@ -192,27 +190,27 @@ public class Main {
         }
     }
 
-	public static interface InputStreamProvider {
-		InputStream provide() throws IOException;
-	}
+    public static interface InputStreamProvider {
+        InputStream provide() throws IOException;
+    }
 
-	public static interface OutputStreamProvider {
-		public OutputStream provide();
-	}
+    public static interface OutputStreamProvider {
+        public OutputStream provide();
+    }
 
-	public static class DefaultInputStreamProvider implements InputStreamProvider {
-		@Override
-		public InputStream provide() {
-			return System.in;
-		}
-	}
+    public static class DefaultInputStreamProvider implements InputStreamProvider {
+        @Override
+        public InputStream provide() {
+            return System.in;
+        }
+    }
 
-	public static class DefaultOutputStreamProvider implements OutputStreamProvider {
-		@Override
-		public OutputStream provide() {
-			return System.out;
-		}
-	}
+    public static class DefaultOutputStreamProvider implements OutputStreamProvider {
+        @Override
+        public OutputStream provide() {
+            return System.out;
+        }
+    }
 
     public static class FileInputStreamProvider implements InputStreamProvider {
         private File file;
