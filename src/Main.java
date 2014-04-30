@@ -1,24 +1,46 @@
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
+import java.io.*;
 import java.util.*;
 
 public class Main {
-    static OutputStreamProvider outputStreamProvider = new DefaultOutputStreamProvider();
+    final static String KEY_FILE = "-f";
 
 	public static void main(String[] args) {
-		IOApp app = new IOApp(
-                inputStreamProviderFactory(args),
-                outputStreamProvider
-        );
-
-        //run app
-		app.process();
+        try {
+            //create app
+            IOApp app = new IOApp(
+                    inputStreamFactory(args),
+                    new DefaultOutputStreamProvider().provide()
+            );
+            //run app
+            app.process();
+        } catch (IOException ex) {
+            System.out.println(String.format("Error: %s", ex.getMessage()));
+        }
 	}
 
-	private static InputStreamProvider inputStreamProviderFactory(String[] args) {
-		return new DefaultInputStreamProvider();
+    /**
+     * Create input stream by args
+     * @param args
+     * @return
+     * @throws IOException
+     */
+	private static InputStream inputStreamFactory(String[] args) throws IOException {
+        if(args.length == 0) {
+            return new DefaultInputStreamProvider().provide();
+        } else if(args.length == 2) {
+
+            final String key = args[0];
+
+            //todo create other input streams
+            if(key.equals(KEY_FILE)) {
+                return new FileInputStreamProvider(new File(args[1])).provide();
+            } else {
+                throw new IOException(String.format("Wrong arg key '%s'", key));
+            }
+
+        } else {
+            throw new IOException("Wrong arg key(s)");
+        }
 	}
 
     /**
@@ -29,9 +51,9 @@ public class Main {
 	    private OutputStream outputStream;
         public final static String DELIMITER = " ";
 
-	    public IOApp(InputStreamProvider inputStreamProvider, OutputStreamProvider outputStreamProvider) {
-		   this.inputStream = inputStreamProvider.provide();
-		   this.outputStream = outputStreamProvider.provide();
+	    public IOApp(InputStream inputStream, OutputStream outputStream) throws IOException {
+		   this.inputStream = inputStream;
+		   this.outputStream = outputStream;
 	    }
 
         public InputStream getInputStream() {
@@ -48,7 +70,7 @@ public class Main {
          * @throws IOException
          */
         private void writeNotice(String err) throws IOException {
-           String message = String.format("notice: %s", err);
+           String message = String.format("Notice: %s", err);
             getOutputStream().write(message.getBytes());
         }
 
@@ -62,10 +84,12 @@ public class Main {
             resultString.append("-------- result ---------\n");
             for(Map.Entry<String, Integer> entry :  result.entrySet()) {
                 String login = entry.getKey();
-                String capitalizeLogin = login.substring(0, 1).toUpperCase()
-                        + login.substring(1);
 
-                resultString.append(String.format("%s - %s\n", capitalizeLogin, entry.getValue()));
+                /*//capitalize login
+                login = login.substring(0, 1).toUpperCase()
+                        + login.substring(1);*/
+
+                resultString.append(String.format("%s %s\n", login, entry.getValue()));
             }
 
             getOutputStream().write(resultString.toString().getBytes());
@@ -87,7 +111,7 @@ public class Main {
             return logins;
         }
 
-        public void process() {
+        public void process() throws IOException {
             InputStreamReader inputStreamReader = new InputStreamReader(getInputStream());
             StringBuilder sb = new StringBuilder();
             try {
@@ -113,7 +137,11 @@ public class Main {
                    }
                }
             } catch (IOException e) {
-                e.printStackTrace();
+                throw e;
+            } finally {
+                //close streams
+                getInputStream().close();
+                getOutputStream().close();
             }
         }
 
@@ -165,7 +193,7 @@ public class Main {
     }
 
 	public static interface InputStreamProvider {
-		InputStream provide();
+		InputStream provide() throws IOException;
 	}
 
 	public static interface OutputStreamProvider {
@@ -185,4 +213,17 @@ public class Main {
 			return System.out;
 		}
 	}
+
+    public static class FileInputStreamProvider implements InputStreamProvider {
+        private File file;
+
+        public FileInputStreamProvider(File file) throws FileNotFoundException {
+            this.file = file;
+        }
+
+        @Override
+        public InputStream provide() throws IOException {
+            return new FileInputStream(file);
+        }
+    }
 }
